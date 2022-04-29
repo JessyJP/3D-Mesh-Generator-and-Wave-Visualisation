@@ -9,6 +9,8 @@
 % Clean the workspace
 clc;close all;
 
+% converFig2EPS_PNG_PDF_submodule
+addpath("./converFig2EPS_PNG_PDF_submodule")
 % Add the displacement/deformation functions
 addpath("./Displacement&Deformation_Functions");
 
