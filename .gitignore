@@ -1,1 +1,4 @@
 Test.m
+\.venv
+*.pyc
+__pycache__
