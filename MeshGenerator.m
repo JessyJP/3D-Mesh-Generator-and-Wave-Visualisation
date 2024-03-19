@@ -1,5 +1,5 @@
 %
-% Classname:   MeshGenerator 
+% Class-name:   MeshGenerator 
 % Description: This script generates 2D/3D mesh and visualizes it.
 % 
 % Author: JessyJP (2022) % License: GPLv3 @ LICENCE.md
@@ -13,7 +13,7 @@ classdef MeshGenerator < handle
         cubeTemplate;% This is a cube prototype
         elementAlignemntTypes;
         Elements;% Store the elements
-        xyz;% The dimention and setup of the mesh
+        xyz;% The dimension and setup of the mesh
     end
 
     % Public properties
@@ -27,7 +27,7 @@ classdef MeshGenerator < handle
     end
     
     methods
-        % Contsturcor
+        % Constructor
         function [mesh] = MeshGenerator()
             % Settings
             mesh.dimRemoveID = 0;% 0=>OFF 1=>x 2=>y 3=>z
@@ -38,9 +38,9 @@ classdef MeshGenerator < handle
             for i = 1:numel(xyz)
                 % Constant IDs
                 xyz(i).ID=i;
-                % Meesh properties: Defautl Limits
+                % Mesh properties: Default Limits
                 xyz(i).Lim = [0 1]; 
-                % Meesh properties: Default Number of Elements
+                % Mesh properties: Default Number of Elements
                 xyz(i).N = 1;
                 % Element Gap factor between elements
                 xyz(i).gapP= 0.1;% Input 
@@ -48,7 +48,7 @@ classdef MeshGenerator < handle
                 xyz(i).ElementL = mesh.calcElSpacing(xyz(i))*(1-xyz(i).gapP); 
                 % Element side length gap
                 xyz(i).gap =  mesh.calcElSpacing(xyz(i))*(xyz(i).gapP);
-                % Element side length
+                % Mesh grid coordinates
                 xyz(i).Coords = {};
                 % Mesh grid coordinates
                 xyz(i).mesh =[];
@@ -67,7 +67,7 @@ classdef MeshGenerator < handle
             mesh.cube.FaceConnectNodes = [1 4 3 2; 5 8 7 6; 1 2 6 5; 3 4 8 7; 2 3 7 6; 1 5 8 4];
             mesh.cube.center = mean(mesh.cube.nodesR);
             % Properties
-            mesh.cube.colourF = [100 100 100]/100;%RGB persentage or use 'none'
+            mesh.cube.colourF = [100 100 100]/100;%RGB percentage or use 'none'
             mesh.cube.colourE = [0 0 0]/100;
             mesh.cube.FaceAlpha = 100/100;% Alpha percentage
             
@@ -91,10 +91,10 @@ classdef MeshGenerator < handle
             mesh.cubeTemplate.colourF    = mesh.cube.colourF;
             mesh.cubeTemplate.colourE    = mesh.cube.colourE;
             mesh.cubeTemplate.FaceAlpha = mesh.cube.FaceAlpha;
-            % Update the colorurs of the template cube
+            % Update the colours of the template cube
             mesh.cube = mesh.cubeTemplate;
             
-            % Default viewing Limitts 
+            % Default viewing Limits 
             mesh.Pplot.limX = mesh.xyz{'x','Lim'}*mesh.Pplot.scaleFactor;
             mesh.Pplot.limY = mesh.xyz{'y','Lim'}*mesh.Pplot.scaleFactor;
             mesh.Pplot.limZ = mesh.xyz{'z','Lim'}*mesh.Pplot.scaleFactor;                       
@@ -104,13 +104,13 @@ classdef MeshGenerator < handle
             mesh.xyz('y',:) = mesh.setupCoordinate(mesh.xyz('y',:));
             mesh.xyz('z',:) = mesh.setupCoordinate(mesh.xyz('z',:));
 
-            % Remove the dimention componennt 
+            % Remove the dimension component 
             if mesh.dimRemoveID > 0 && mesh.dimRemoveID <= 3
-                % Remove the cube nodes that correspond to the removed dimention   
+                % Remove the cube nodes that correspond to the removed dimension   
                 ind = not(mesh.cube.nodesR(:,mesh.dimRemoveID) > 0);
                 mesh.cube.nodesR = mesh.cube.nodesR(ind,:);
 
-                % Get the right suquare face
+                % Get the right square face
                 % For removing For X
                 if mesh.dimRemoveID == 1                    
                     mesh.cube.FaceConnectNodes = [1 2 4 3];
@@ -131,7 +131,7 @@ classdef MeshGenerator < handle
                  mesh.calcElSpacing(mesh.xyz('y',:)) ...
                  mesh.calcElSpacing(mesh.xyz('z',:))].*(1-mesh.xyz.gapP'));
 
-            % Cube Test prevew
+            % Cube Test preview
 %             mesh.PplotElements(mesh.translateElements(mesh.cube,[-1 -1 -1]*0.5*0));
             
             [X,Y,Z] = meshgrid(mesh.xyz{"x","Coords"}{:},mesh.xyz{"y","Coords"}{:},mesh.xyz{"z","Coords"}{:});
@@ -163,14 +163,14 @@ classdef MeshGenerator < handle
         end
                 
         % Setup Coordinate
-        function [c] = setupCoordinate(mesh,c)%s - general coordinat, P - properties
+        function [c] = setupCoordinate(mesh,c)%s - general coordinates, P - properties
 
-            % Setup Meesh properties: Element length
+            % Setup Mesh properties: Element length
             c.ElementL = mesh.calcElSpacing(c)*(1-c.gapP);
-            % Setup Meesh properties: Element gap
+            % Setup Mesh properties: Element gap
             c.gap      = mesh.calcElSpacing(c)*(c.gapP);
 
-            % Remove a dimention for the grid
+            % Remove a dimension for the grid
             c.Lim = c.Lim*not(mesh.dimRemoveID==c.ID);
 
             % Make a grid origins i.e. the [0 0 0] vertex of the Element cube polygon
@@ -184,7 +184,7 @@ classdef MeshGenerator < handle
             size_element = (c.Lim(2)-c.Lim(1))./c.N;
         end
             
-        % Subfnction for plotting element
+        % Subfunction for plotting element
         function plotElements(mesh,elements)
             % Get handles and do plotting
             try 
@@ -223,7 +223,7 @@ classdef MeshGenerator < handle
             drawnow;
         end
 
-        % Subfnction for plotting element
+        % Subfunction for plotting element
         function plotMeshFast(mesh,elements)
             % Get handles and do plotting
             try 
@@ -266,9 +266,9 @@ classdef MeshGenerator < handle
         end
         
         % Subfunction for translating element
-        function [elements] = translateElements(mesh,elements,translationVector)
+        function [elements] = translateElements(~,elements,translationVector)
             for i = 1:numel(elements)
-                % Transalte vector        
+                % Translate vector        
                 elements(i).nodesR = elements(i).nodesR + repmat(translationVector,size(elements(i).nodesR,1),1);
                 % Calculate the center
                 elements(i).center   = mean(elements(i).nodesR);
@@ -276,7 +276,7 @@ classdef MeshGenerator < handle
         end
 
         % Subfunction for scaling element
-        function [Elements] = scaleElements(mesh,Elements,scale)
+        function [Elements] = scaleElements(~,Elements,scale)
             for i = 1:numel(Elements)
                 R = Elements(i).nodesR;
                 c = Elements(i).center;
@@ -292,7 +292,7 @@ classdef MeshGenerator < handle
         function [elements] = transformElements(~,elements,transformationF)
         % function [elements] = transformElements(~,elements,transformationF)   
             for i = 1:numel(elements)
-                % Transalte vector        
+                % Translate vector        
                 elements(i) = transformationF(elements(i));                
             end
         end
@@ -308,12 +308,12 @@ classdef MeshGenerator < handle
         
         %%%%% Add function for element rotation
         
-        % Get method for the mex XYZ
+        % Get method for the max XYZ
         function xyz = get.xyz(mesh)
              xyz = mesh.xyz;
         end
         
-        % Convert elemetns to a matrix of coordinates
+        % Convert elements to a matrix of coordinates
         function M = getMatrix(~,elements,property)
         % function M = getMatrix(~,elements,property)
         % M = cell2mat({elements.(property)}');
