@@ -7,23 +7,23 @@
 
 %% Mesh generator
 classdef MeshGenerator < handle
+    % MeshGenerator Class Implementation
+    % This script generates 2D/3D mesh and visualizes it using CubeVoxel instances.
     
     % Internal properties
     properties (SetAccess=private)
         cubeTemplate;% This is a cube prototype
         elementAlignemntTypes;
-        Elements;% Store the elements
+        elements;% Store the elements
         xyz;% The dimension and setup of the mesh
     end
 
     % Public properties
-    properties (SetAccess=public)
-        cube;% Working cube modified  
-    end
-    properties (SetAccess=public)
-        dimRemoveID;
-        Pplot; 
-        fig;
+    properties (Access=public)
+        cube % Working cube modified
+        dimRemoveID % 0=>OFF, 1=>x, 2=>y, 3=>z
+        Pplot % Plot settings
+        fig % Figure for plotting
     end
     
     methods
@@ -57,23 +57,18 @@ classdef MeshGenerator < handle
             % Element Alignment
             mesh.elementAlignemntTypes = ["Symetric";"Center"];
             % Default Plot view direction
-            mesh.Pplot.View = 3;
-            mesh.Pplot.gridON = 1;
-            mesh.Pplot.scaleFactor = 1;
-            mesh.Pplot.axisEqual = 1;
-            % Cube Template Coordinates
-            mesh.cube.id = 0;
-            mesh.cube.nodesR=[0 0 0; 0 0 1; 1 0 1; 1 0 0; 0 1 0; 0 1 1; 1 1 1; 1 1 0; ];
-            mesh.cube.FaceConnectNodes = [1 4 3 2; 5 8 7 6; 1 2 6 5; 3 4 8 7; 2 3 7 6; 1 5 8 4];
-            mesh.cube.center = mean(mesh.cube.nodesR);
-            % Properties
-            mesh.cube.colourF = [100 100 100]/100;%RGB percentage or use 'none'
-            mesh.cube.colourE = [0 0 0]/100;
-            mesh.cube.FaceAlpha = 100/100;% Alpha percentage
-            
+            mesh.Pplot = struct( ...
+                'View', 3, 'gridON', true, 'scaleFactor', 1, 'axisEqual', true, ...
+                'limX', [0, 1], 'limY', [0, 1], 'limZ', [0, 1]);
+
+
             % Assign Mesh
             mesh.xyz = struct2table(xyz,'RowNames',{xyz.Label});
-            mesh.cubeTemplate = mesh.cube;% Record the original type
+
+
+            % Initialize cube template with default CubeVoxel
+            mesh.cubeTemplate = CubeVoxel(0, [], [], [], [], 1.0);
+            mesh.cube = mesh.cubeTemplate; % Copy the cube template to the public cube property            
         end
         
         % Setup mesh
@@ -88,9 +83,7 @@ classdef MeshGenerator < handle
             end
             
             % Setup Properties and Update colours
-            mesh.cubeTemplate.colourF    = mesh.cube.colourF;
-            mesh.cubeTemplate.colourE    = mesh.cube.colourE;
-            mesh.cubeTemplate.FaceAlpha = mesh.cube.FaceAlpha;
+            mesh.cubeTemplate.updateColourPropertiesFrom(mesh.cube);
             % Update the colours of the template cube
             mesh.cube = mesh.cubeTemplate;
             
@@ -126,13 +119,14 @@ classdef MeshGenerator < handle
             end
             
             % Scale the cube
-            mesh.cube = mesh.scaleElements(mesh.cube,...
+            mesh.cube = mesh.scale(mesh.cube,...
                 [mesh.calcElSpacing(mesh.xyz('x',:))  ...
                  mesh.calcElSpacing(mesh.xyz('y',:)) ...
-                 mesh.calcElSpacing(mesh.xyz('z',:))].*(1-mesh.xyz.gapP'));
+                 mesh.calcElSpacing(mesh.xyz('z',:))].*(1-mesh.xyz.gapP'), ...
+                 [0 , 0, 0]);
 
             % Cube Test preview
-%             mesh.PplotElements(mesh.translateElements(mesh.cube,[-1 -1 -1]*0.5*0));
+%             mesh.PplotElements(mesh.translate(mesh.cube,[-1 -1 -1]*0.5*0));
             
             [X,Y,Z] = meshgrid(mesh.xyz{"x","Coords"}{:},mesh.xyz{"y","Coords"}{:},mesh.xyz{"z","Coords"}{:});
             % Assign Mesh
@@ -141,23 +135,28 @@ classdef MeshGenerator < handle
             mesh.xyz{"z","mesh"} = {Z};
             
             Elements_ = [];
+            offsetNodeInd = 0;
             % Make mesh
             for i = 1:numel(X)
                 % Make elements
-                El = mesh.cube;
-                El.id = i;
+                el = mesh.cube.deepCopy();
+                el.id = i;
+                el.offsetNodeInd  = offsetNodeInd ;                
+                % Update the face node index                
+                offsetNodeInd = offsetNodeInd  + size(el.nodesR,1);
+                
                 % Translate the 
-                El = mesh.translateElements(El,[X(i),Y(i),Z(i)]);
+                el = el.translate([X(i),Y(i),Z(i)]);
                 % For fast plotting
-                El.FaceConnectNodes_Fast = El.FaceConnectNodes + (i-1)*(8*(mesh.dimRemoveID==0)+4*(mesh.dimRemoveID~=0)); 
+                el.FaceConnectNodes_Fast = el.FaceConnectNodes + (i-1)*(8*(mesh.dimRemoveID==0)+4*(mesh.dimRemoveID~=0)); 
 %                 El.colourF_Fast     = repmat(El.colourF,   size(El.FaceConnectNodes_Fast,1),1);
 %                 El.FaceAlpha_Fast  = repmat(El.FaceAlpha,size(El.FaceConnectNodes_Fast,1),1);
                 % Gather elements together
-                Elements_ = [Elements_;El];
+                Elements_ = [Elements_;el];
             end
-            mesh.Elements = Elements_;
+            mesh.elements = Elements_;
             % Plot Preview
-%             mesh.PplotElements(mesh.translateElements(Elements_,[0 0 0]*0.5*0));
+%             mesh.PplotElements(mesh.translate(Elements_,[0 0 0]*0.5*0));
 
 
         end
@@ -185,7 +184,7 @@ classdef MeshGenerator < handle
         end
             
         % Subfunction for plotting element
-        function plotElements(mesh,elements)
+        function plotElements(mesh,elements, plotEdgeAlpha)
             % Get handles and do plotting
             try 
                 if not(isvalid(mesh.fig))
@@ -198,7 +197,12 @@ classdef MeshGenerator < handle
             clf(mesh.fig);
             view(mesh.Pplot.View);
             ax = mesh.fig.Children(1);
-            % Get axes and setup plot limits
+                
+            if nargin < 3
+                plotEdgeAlpha = false;
+            end
+
+            % Get axes. Setup plot limits and labels
 %             ax = mesh.ax;
             if mesh.Pplot.axisEqual
                 axis(ax,'equal');
@@ -213,12 +217,38 @@ classdef MeshGenerator < handle
                 grid(ax,'on')
             end
             mesh.Pplot.axP = [];
+            
+            N_elements = numel(elements);
             % Plot elements one by one
-            for i = 1:numel(elements)
+            for i = 1:N_elements
                 E = elements(i);
-                mesh.Pplot.axP(i) = patch(ax,'Faces', E.FaceConnectNodes, 'Vertices', E.nodesR, ...
-                'Facecolor', E.colourF,'FaceAlpha',E.FaceAlpha,'EdgeColor',E.colourE); 
-        %         drawnow
+
+                if (not(plotEdgeAlpha))
+                    mesh.Pplot.axP(i) = patch(ax,'Faces', E.FaceConnectNodes, 'Vertices', E.nodesR, ...
+                    'Facecolor', E.colourF,'FaceAlpha',E.faceAlpha,'EdgeColor',E.colourE); 
+            %         drawnow
+                else
+                    % Plot faces
+                    mesh.Pplot.axP(i) = patch(ax, 'Faces', E.FaceConnectNodes, 'Vertices', E.nodesR, ...
+                          'Facecolor', E.colourF, 'FaceAlpha', E.faceAlpha, 'EdgeColor', 'none');
+                    
+                    % Plot edges with specified edge alpha
+                    edgeAlpha = E.edgeAlpha; % Example edge alpha value
+                    for j = 1:size(E.FaceConnectNodes, 1)
+                        face = E.FaceConnectNodes(j, :);
+                        for k = 1:length(face)
+                            % Determine the next vertex in the face (or loop back to the start)
+                            nextIdx = mod(k, length(face)) + 1;
+                            % Extract the coordinates for the current and next vertex
+                            v1 = E.nodesR(face(k), :);
+                            v2 = E.nodesR(face(nextIdx), :);
+                            % Plot the edge as a line with specified transparency
+                            line(ax, [v1(1), v2(1)], [v1(2), v2(2)], [v1(3), v2(3)], ...
+                                 'Color', [E.colourE, edgeAlpha], 'LineWidth', 1.5);
+                        end
+                    end                    
+                end
+                printProgressBar(i,N_elements,"barLength",20)
             end
             drawnow;
         end
@@ -257,37 +287,68 @@ classdef MeshGenerator < handle
             FaceConnectNodes_Fast = mesh.getMatrix(elements,"FaceConnectNodes_Fast");            
             nodesR = mesh.getMatrix(elements,"nodesR");
 %             colour =  mesh.getMatrix(elements,"Colour_Fast");
-%             FaceAlpha = mesh.getMatrix(elements,"FaceAlpha_Fast");
+%             faceAlpha = mesh.getMatrix(elements,"FaceAlpha_Fast");
             
             mesh.Pplot.axP = ...
             patch(ax,'Faces', FaceConnectNodes_Fast, 'Vertices', nodesR,...
-            'FaceColor',mesh.cube.colourF,'FaceAlpha',mesh.cube.FaceAlpha, 'EdgeColor', mesh.cube.colourE); 
+            'FaceColor',mesh.cube.colourF,'FaceAlpha',mesh.cube.faceAlpha, 'EdgeColor', mesh.cube.colourE); 
             drawnow;
         end
         
         % Subfunction for translating element
-        function [elements] = translateElements(~,elements,translationVector)
+        function [elements] = translate(~,elements,translationVector)
             for i = 1:numel(elements)
-                % Translate vector        
-                elements(i).nodesR = elements(i).nodesR + repmat(translationVector,size(elements(i).nodesR,1),1);
-                % Calculate the center
-                elements(i).center   = mean(elements(i).nodesR);
+                elements(i) =  elements(i).translate(translationVector);
             end
         end
 
         % Subfunction for scaling element
-        function [Elements] = scaleElements(~,Elements,scale)
-            for i = 1:numel(Elements)
-                R = Elements(i).nodesR;
-                c = Elements(i).center;
-                % Scale vector        
-                Elements(i).nodesR = R.*scale;
-
-                % Calculate the center
-                Elements(i).center   = mean(Elements(i).nodesR);
+        function [elements] = scale(~, elements, scaleFactors, centerPoint)
+            % Applies scaling to each voxel in the mesh.
+            % mesh: Array or cell array of CubeVoxel instances.
+            % scaleFactors: A 3-element vector specifying scale factors along x, y, z axes.
+            % centerPoint: Optional. A 3-element vector specifying the center point to scale around.
+            %              If not provided, each voxel's center is used.
+        
+            if nargin < 4
+                useVoxelCenter = true;
+            else
+                useVoxelCenter = false;
+            end
+        
+            for i = 1:length(elements)
+                if useVoxelCenter
+                    elements(i) = elements(i).scale(scaleFactors);
+                else
+                    elements(i) = elements(i).scale(scaleFactors, centerPoint);
+                end
             end
         end
+
+        function [elements] = rotate(~, elements, angle, axis, pivotPoint)
+            % Applies rotation to each voxel in the mesh.
+            % mesh: Array or cell array of CubeVoxel instances.
+            % angle: Rotation angle in degrees.
+            % axis: 'x', 'y', or 'z' axis to rotate around.
+            % pivotPoint: Optional. A 3-element vector specifying the pivot point.
+            %             If not provided, each voxel's center is used.
         
+            if nargin < 5
+                useVoxelCenter = true;
+            else
+                useVoxelCenter = false;
+            end
+        
+            for i = 1:length(elements)
+                if useVoxelCenter
+                    elements(i) = elements(i).rotate(angle, axis);
+                else
+                    elements(i) = elements(i).rotate(angle, axis, pivotPoint);
+                end
+            end
+        end
+
+
         % Transformation functions
         function [elements] = transformElements(~,elements,transformationF)
         % function [elements] = transformElements(~,elements,transformationF)   
@@ -305,8 +366,19 @@ classdef MeshGenerator < handle
             end
         end
         
-        
-        %%%%% Add function for element rotation
+        function elementsCopy = copyElements(mesh)
+            % Creates a deep copy of all elements in the mesh.
+            % Returns an array of CubeVoxel instances that are deep copies of the original elements.
+            
+            % Initialize an empty array to hold the copies.
+            % Depending on how elements are stored, you might need to use {} for a cell array.
+            elementsCopy = repmat(CubeVoxel(0, [], [], [], [], 1.0), size(mesh.elements));
+            
+            % Iterate over each element and create a deep copy.
+            for i = 1:length(mesh.elements)
+                elementsCopy(i) = mesh.elements(i).deepCopy();
+            end
+        end
         
         % Get method for the max XYZ
         function xyz = get.xyz(mesh)
@@ -319,6 +391,83 @@ classdef MeshGenerator < handle
         % M = cell2mat({elements.(property)}');
             M = cell2mat({elements.(property)}');
         end
+        
+        function vertexMatrix = elementsToVertexMatrix(mesh)
+            % Extract all nodes from each element and concatenate them into a single matrix
+            allNodes = vertcat(mesh.elements.nodesR);
+            
+            % Assuming each vertex has a unique ID across the mesh, sort or organize
+            % the vertices if necessary (this step may adjust based on how IDs are assigned and used)
+            % For simplicity, this example assumes vertices are already in the correct order
+            
+            vertexMatrix = allNodes; % Each row is [x, y, z] for a vertex
+        end
+
+        function vertexMatrixToElements(mesh, vertexMatrix)
+            % Starting index for vertices in the matrix
+            startIndex = 1;
+            
+            for i = 1:length(mesh.elements)
+                % Number of vertices for the current element
+                numVertices = size(mesh.elements(i).nodesR, 1);
+                
+                % Extract the subset of the vertex matrix for the current element
+                endIndex = startIndex + numVertices - 1;
+                mesh.elements(i).nodesR = vertexMatrix(startIndex:endIndex, :);
+                
+                % Update the start index for the next element
+                startIndex = endIndex + 1;
+            end
+        end
+
+
+        function exportToFile(mesh, filename, format)
+            % Validate the format
+            validFormats = ["OBJ", "STL"];
+            if ~ismember(upper(format), validFormats)
+                error(['Unsupported format: ', format]);
+            end
+            
+            % Ensure filename ends with the correct extension
+            [path, name, ext] = fileparts(filename);
+            if ~strcmpi(ext, ['.', lower(format)])
+                filename = fullfile(path, join([name, '.', lower(format)],""));
+            end
+            
+            % Open the file
+            fileID = fopen(filename, 'w');
+            if fileID == -1
+                error(['Failed to open file: ', filename]);
+            end
+            
+            % Write the file header based on the format
+            switch upper(format)
+                case "OBJ"
+                    fprintf(fileID, '# OBJ file exported from MATLAB\n');
+                case "STL"
+                    fprintf(fileID, 'solid mesh\n');
+            end
+            
+            % Write the mesh data
+            for i = 1:numel(mesh.elements)
+                switch upper(format)
+                    case "OBJ"
+                        fprintf(fileID, '%s', mesh.elements(i).toOBJString());
+                    case "STL"
+                        fprintf(fileID, '%s', mesh.elements(i).toSTLString());
+                end
+                printProgressBar(i,numel(mesh.elements),"barLength",20);
+            end
+            
+            % Write the file footer based on the format
+            if upper(format) == "STL"
+                fprintf(fileID, 'endsolid mesh\n');
+            end
+            
+            % Close the file
+            fclose(fileID);
+        end
+
     end
 end
 

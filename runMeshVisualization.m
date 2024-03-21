@@ -2,12 +2,10 @@
 % Author: JessyJP (2022) % License: GPLv3 @ LICENCE.md
 %
 
-% function runMeshVisualization(cMapInd)
-
 %% Initialize Mesh Generator
 
 % Clean the workspace
-clc;close all;
+clear; clc;close all; 
 
 % converFig2EPS_PNG_PDF_submodule
 addpath("./converFig2EPS_PNG_PDF_submodule")
@@ -15,6 +13,7 @@ addpath("./converFig2EPS_PNG_PDF_submodule")
 addpath("./Displacement&Deformation_Functions");
 
 % Properties
+global cMapInd saveON saveOutputDir
 cMapInd = 11;% Colourmap index. Check the subfunction "colourGrade" at the end of the file
 saveON = false;% Control flag
 saveOutputDir='./Fig-EPS-PNG-output';% The output directory
@@ -24,34 +23,20 @@ m = MeshGenerator();
 % Setup the mesh
 m.setupMesh();
 % Plot the cube
-m.plotElements(m.translateElements(m.cube,[-1 -1 -1]*0.5*0));
+m.plotElements(m.translate(m.cube,[-1 -1 -1]*0.5*0));
 
 % Get the xyz mesh dimentions and properties
 xyz = m.xyz;
 
+% Plotting properties
+m.Pplot.scaleFactor = 15/10;% Axes scale factor
+
 %% Example 1 = Make Mesh for RayleighWave
 clc;S=[];% Clear the screen and the function properties
 
-    % Mesh Properties 
-    m.dimRemoveID = 0;% Remove a dimention index. Very easy way to do dimention bisection
-    xyz.N = [50 3 20]';% Number of mesh elements
-    xyz.gapP = [20 20 20]'./100;% Gap percetnage 
-    xyz{'x','Lim'} = [-10 10];% Limits
-    xyz{'y','Lim'} = [-1.5 1.5];% Limits
-    xyz{'z','Lim'} = [-3 0];% Limits
-    
-    % Plotting properties
-    m.Pplot.scaleFactor = 15/10;% Axes scale factor
-    m.cube.FaceAlpha = 100/100;
-
-% Make mesh
-m.setupMesh(xyz);
-
-% Plot Mesh
-m.plotMeshFast(m.translateElements(m.Elements,[0 0 0]*m.Pplot.scaleFactor));
-
     % Diplay Wave settings determinted by the variables defined in the "S.Uxyz" referenced function 
     S.i = 1;% Proerpty set index 
+    S.fileName = 'RayleighWave';
     S.Uxyz = @RayleighWave_Displacements;% Deformation function handle/reference
     % Function input time
     S.t = (0*10/180)*pi;
@@ -63,92 +48,34 @@ m.plotMeshFast(m.translateElements(m.Elements,[0 0 0]*m.Pplot.scaleFactor));
     S.A2 = 34/10;
     S.omega = 1;
 
+% Initialize the mesh generator
+m = MeshGenerator();
 
-% Visualization properties
-m.Pplot.limZ(2) = 2;
-% m.Pplot.axisEqual = 1;
-% m.Pplot.View = 3;
-m.cube.colourF = [204 204 0]/255;
-m.cube.colourE = 70/100*[1 1 1];%[140 140 0]/255;
-m.cube.colourE = [100 100 100]/255;
-
-
-% Get elements set "EE" which is the set we will manipulate
-% This is actually the mesh as an element set
-EE = m.Elements;
-
-% Transformation: Translate the mesh
-% EE = m.translateElements(EE,[0 0 0]*m.Pplot.scaleFactor);
-
-% Transformation: Deformation or displacement
-switch (1)
-    case 1% Deformation plotting        
-        EE = m.transformNodesR(EE,@(R) RayleighWave_Displacements(R,S));
-    case 2% Translation plotting
-        EE = m.transformElements(EE,@(E) displaceCenter_Uxyz(E,S));
-end    
-
-% Update colours
-EE = m.transformElements(EE,@(E) colourUpdate(E,m.cube));
-% Calculate the colour gradients
-R0 = m.getMatrix(m.Elements,'nodesR');
-R  = m.getMatrix(EE,'nodesR');
-distM = max(sqrt(sum((R - R0).^2,2)));
-EE = m.transformElements(EE,@(E) colourGrade(E,(m.Elements),distM,cMapInd));%struct2table
-    
-% Ploting element by element or all using the matrix. 
-% The difference is that the fast method doesn't allow for custom colour
-% grading while the slow method being element by element allows for percise
-% coloring
-if cMapInd<0; m.plotMeshFast(EE); else
-m.plotElements(EE); end
-
-% Post polot adjustments
-axis off;
-
-% set(get(m.fig.Children.Children,'children'), 'edgecolor', [0 0 0])
-
-% Rotation and view -- if needed
-% rotate(m.fig.Children.Children,[1 0 0],90,mean(xyz.Lim,2));
-% rotate(m.Pplot.axP,[1 0 0],90,mean(xyz.Lim,2))
-% view(157,-66)
-% camproj('orthographic');
-% camproj('perspective');
-% set(gca, 'CameraPosition', [0,0,0])
-% set(gca, 'CameraTarget', [0,0,1])
-% set(gca, 'CameraUpVector', [0,1,1])
-
-
-fileNames{S.i} = 'RayleighWave';
-if saveON
-    fileNames{S.i} = func2str(S.Uxyz);
-    fileNames{S.i} = [fileNames{S.i},'_C_',num2str(cMapInd)];
-    savefig(m.fig,fullfile(saveOutputDir,fileNames{S.i}));
-end
-
-%% Example 2 = Make Mesh for Love Wave
-clc;S=[];% Clear the screen and the function properties
-    
     % Mesh Properties 
-    m.dimRemoveID = 0;% Remove a dimention
-    xyz.N = [100 3 10]';% Number of mesh points
-    xyz.gapP = [0 20 0]'./100;% Gap percetnage 
-    xyz{'x','Lim'} = [-8 8];% Limits
-    xyz{'y','Lim'} = [-2 2];% Limits
-    xyz{'z','Lim'} = [-4 0];% Limits
-    
+    m.dimRemoveID = 0;% Remove a dimention index. Very easy way to do dimention bisection
+    xyz.N = [50 3 20]';% Number of mesh elements
+    xyz.gapP = [20 20 20]'./100;% Gap percetnage 
+    xyz{'x','Lim'} = [-10 10];% Limits
+    xyz{'y','Lim'} = [-1.5 1.5];% Limits
+    xyz{'z','Lim'} = [-3 0];% Limits   
     % Plotting properties
     m.Pplot.scaleFactor = 15/10;% Axes scale factor
-    m.cube.FaceAlpha = 100/100;
 
 % Make mesh
 m.setupMesh(xyz);
 
-% Plot Mesh
-% m.plotMeshFast(m.translateElements(m.Elements,[0 0 0]*m.Pplot.scaleFactor));
+
+% Visualization properties
+m.Pplot.limZ(2) = 2;
+
+visualizationSeqence(m , S)
+
+%% Example 2 = Make Mesh for Love Wave
+clc;S=[];% Clear the screen and the function properties
 
     % Diplay Wave settings determinted by the variables defined in the "S.Uxyz" referenced function 
     S.i = 2;
+    S.fileName = 'LoveWave';
     S.Uxyz = @LoveWave_Displacements;
     S.t = (0*10/180)*pi;% Time
     % Material Properties for the deformation function: Love Wave
@@ -160,61 +87,42 @@ m.setupMesh(xyz);
     S.h  = -1;
     S.omega = 10/10;
 
+% Initialize the mesh generator
+m = MeshGenerator();
+
+    % Mesh Properties 
+    m.dimRemoveID = 0;% Remove a dimention
+    xyz.N = [100 3 10]';% Number of mesh points
+    xyz.gapP = [0 20 0]'./100;% Gap percetnage 
+    xyz{'x','Lim'} = [-8 8];% Limits
+    xyz{'y','Lim'} = [-2 2];% Limits
+    xyz{'z','Lim'} = [-4 0];% Limits
+    % Plotting properties
+    m.Pplot.scaleFactor = 15/10;% Axes scale factor
+    
+% Make mesh
+m.setupMesh(xyz);
+
 % View properties
 m.Pplot.limY = [-2 2]*2;
-% m.Pplot.axisEqual = 1;
-% m.Pplot.View = 3;
-m.cube.colourF = [204 204 0]/255;
-m.cube.colourE = 70/100*[1 1 1];%[140 140 0]/255;
-m.cube.colourE = [100 100 100]/255;
 
-%  Get elements 
-EE = m.Elements;
-% Translate
-EE = m.translateElements(EE,[0 0 0]*m.Pplot.scaleFactor);
-% Make Displacements
-switch (1)
-    case 1% Deformation plotting        
-        EE = m.transformNodesR(EE,@(R) LoveWave_Displacements(R,S));
-    case 2% Translation plotting
-        EE = m.transformElements(EE,@(E) displaceCenter_Uxyz(E,S));
-end    
-% Update colours
-EE = m.transformElements(EE,@(E) colourUpdate(E,m.cube));
-% Calculate the colour gradients
-R0 = m.getMatrix(m.Elements,'nodesR');
-R  = m.getMatrix(EE,'nodesR');
-distM = max(sqrt(sum((R - R0).^2,2)));
-EE = m.transformElements(EE,@(E) colourGrade(E,(m.Elements),distM,cMapInd));%struct2table
-    
-% Plot 
-if cMapInd<0; m.plotMeshFast(EE); else
-m.plotElements(EE); end
-
-% Post polot adjustments
-axis off
-% m.Pplot.axP.LineWidth = 0.0001;
-% set(get(m.fig.Children.Children,'children'), 'edgecolor', [0 0 0])
-
-% Rotation and view -- if needed
-% rotate(m.fig.Children.Children,[1 0 0],90,mean(xyz.Lim,2));
-% rotate(m.Pplot.axP,[1 0 0],90,mean(xyz.Lim,2))
-% view(157,-66)
-% camproj('orthographic');
-% camproj('perspective');
-% set(gca, 'CameraPosition', [0,0,0])
-% set(gca, 'CameraTarget', [0,0,1])
-% set(gca, 'CameraUpVector', [0,1,1])
-
-fileNames{S.i} = 'LoveWave';
-if saveON
-    fileNames{S.i} = func2str(S.Uxyz);
-    fileNames{S.i} = [fileNames{S.i},'_C_',num2str(cMapInd)];
-    savefig(m.fig,fullfile(saveOutputDir,fileNames{S.i}));
-end
+visualizationSeqence(m , S)
 
 %% Example 3 = Make Mesh for P Longitudinal Wave
 clc;S =[];
+
+    % Diplay Wave settings determinted by the variables defined in the "S.Uxyz" referenced function
+    S.i = 3;
+    S.fileName = 'P_LongitudinalWave';
+    S.Uxyz = @P_LongitudinalWave_Displacements;
+    S.t = (0*10/180)*pi;% Time
+    % Material Properties for the deformation function: P Wave
+    S.A = 5/10;
+    S.k = 10/10;
+    S.omega = 1;
+
+% Initialize the mesh generator
+m = MeshGenerator();
 
     % Mesh Properties 
     m.dimRemoveID = 0;% Remove a dimention
@@ -223,102 +131,24 @@ clc;S =[];
     xyz{'x','Lim'} = [-8 8];% Limits
     xyz{'y','Lim'} = [-1.5 1.5];% Limits
     xyz{'z','Lim'} = [-3 0];% Limits
-    
     % Plotting properties
     m.Pplot.scaleFactor = 15/10;% Axes scale factor
-    m.cube.FaceAlpha = 100/100;
 
 % Make mesh
 m.setupMesh(xyz);
 
-% Plot Mesh
-% m.plotMeshFast(m.translateElements(m.Elements,[0 0 0]*m.Pplot.scaleFactor));
-
-    % Diplay Wave settings determinted by the variables defined in the "S.Uxyz" referenced function
-    S.i = 3;
-    S.Uxyz = @P_LongitudinalWave_Displacements;
-    S.t = (0*10/180)*pi;% Time
-    % Material Properties for the deformation function: P Wave
-    S.A = 5/10;
-    S.k = 10/10;
-    S.omega = 1;
 
 % View properties
 m.Pplot.limZ(2) = 2;
-% m.Pplot.axisEqual = 1;
-% m.Pplot.View = 3;
-m.cube.colourF = [204 204 0]/255;
-m.cube.colourE = 70/100*[1 1 1];%[140 140 0]/255;
-m.cube.colourE = [100 100 100]/255;
 
-
-%  Get elements 
-EE = m.Elements;
-% Translate
-% EE = m.translateElements(EE,[0 0 0]*m.Pplot.scaleFactor);
-% Make Displacements
-switch (1)
-    case 1% Deformation plotting        
-        EE = m.transformNodesR(EE,@(R) P_LongitudinalWave_Displacements(R,S));
-    case 2% Translation plotting
-        EE = m.transformElements(EE,@(E) displaceCenter_Uxyz(E,S));
-end    
-% Update colours
-EE = m.transformElements(EE,@(E) colourUpdate(E,m.cube));
-% Calculate the colour gradients
-R0 = m.getMatrix(m.Elements,'nodesR');
-R  = m.getMatrix(EE,'nodesR');
-distM = max(sqrt(sum((R - R0).^2,2)));
-EE = m.transformElements(EE,@(E) colourGrade(E,(m.Elements),distM,cMapInd));%struct2table
-    
-% Plot 
-if cMapInd<0; m.plotMeshFast(EE); else
-m.plotElements(EE); end
-
-% Post polot adjustments
-axis off
-% m.Pplot.axP.LineWidth = 0.0001;
-% set(get(m.fig.Children.Children,'children'), 'edgecolor', [0 0 0])
-
-% Rotation and view -- if needed
-% rotate(m.fig.Children.Children,[1 0 0],90,mean(xyz.Lim,2));
-% rotate(m.Pplot.axP,[1 0 0],90,mean(xyz.Lim,2))
-% view(157,-66)
-% camproj('orthographic');
-% camproj('perspective');
-% set(gca, 'CameraPosition', [0,0,0])
-% set(gca, 'CameraTarget', [0,0,1])
-% set(gca, 'CameraUpVector', [0,1,1])
-
-fileNames{S.i} = 'P_LongitudinalWave';
-if saveON
-    fileNames{S.i} = func2str(S.Uxyz);
-    fileNames{S.i} = [fileNames{S.i},'_C_',num2str(cMapInd)];
-    savefig(m.fig,fullfile(saveOutputDir,fileNames{S.i}));
-end
+visualizationSeqence(m , S)
 
 %% Example 4 = Make Mesh for S Transverse Wave
 clc;S =[];
-% Mesh Properties 
-m.dimRemoveID = 0;% Remove a dimention
-xyz.N = [150 3 20]';% Number of mesh points
-xyz.gapP = [0 20 20]'./100;% Gap percetnage 
-xyz{'x','Lim'} = [-10 10];% Limits
-xyz{'y','Lim'} = [-1.5 1.5];% Limits
-xyz{'z','Lim'} = [-3 0];% Limits
-
-% Plotting properties
-m.Pplot.scaleFactor = 15/10;% Axes scale factor
-m.cube.FaceAlpha = 100/100;
-
-% Make mesh
-m.setupMesh(xyz);
-
-% Plot Mesh
-% m.plotMeshFast(m.translateElements(m.Elements,[0 0 0]*m.Pplot.scaleFactor));
 
     % Diplay Wave settings determinted by the variables defined in the "S.Uxyz" referenced function
     S.i = 4;
+    S.fileName = 'S_TransverseWave';
     S.Uxyz = @S_TransverseWave_Displacements;
     S.t = (0*10/180)*pi;% Time
     % Material Properties for Rayleigh Wave
@@ -326,72 +156,109 @@ m.setupMesh(xyz);
     S.A = 10/10;
     S.omega = 1;
 
+% Initialize the mesh generator
+m = MeshGenerator();
+    
+    % Mesh Properties 
+    m.dimRemoveID = 0;% Remove a dimention
+    xyz.N = [150 3 20]';% Number of mesh points
+    xyz.gapP = [0 20 20]'./100;% Gap percetnage 
+    xyz{'x','Lim'} = [-10 10];% Limits
+    xyz{'y','Lim'} = [-1.5 1.5];% Limits
+    xyz{'z','Lim'} = [-3 0];% Limits
+    % Plotting properties
+    m.Pplot.scaleFactor = 15/10;% Axes scale factor
+    
+% Make mesh
+m.setupMesh(xyz);
 
 % View properties
 m.Pplot.limZ(2) = 2;
-% m.Pplot.axisEqual = 1;
-% m.Pplot.View = 3;
-m.cube.colourF = [204 204 0]/255;
-m.cube.colourE = 70/100*[1 1 1];%[140 140 0]/255;
-m.cube.colourE = [100 100 100]/255;
 
-
-%  Get elements 
-EE = m.Elements;
-% Translate
-% EE = m.translateElements(EE,[0 0 0]*m.Pplot.scaleFactor);
-% Make Displacements
-switch (1)
-    case 1% Deformation plotting        
-        EE = m.transformNodesR(EE,@(R) S_TransverseWave_Displacements(R,S));
-    case 2% Translation plotting
-        EE = m.transformElements(EE,@(E) displaceCenter_Uxyz(E,S));
-end    
-% Update colours
-EE = m.transformElements(EE,@(E) colourUpdate(E,m.cube));
-% Calculate the colour gradients
-R0 = m.getMatrix(m.Elements,'nodesR');
-R  = m.getMatrix(EE,'nodesR');
-distM = max(sqrt(sum((R - R0).^2,2)));
-EE = m.transformElements(EE,@(E) colourGrade(E,(m.Elements),distM,cMapInd));%struct2table
-    
-% Plot 
-if cMapInd<0; m.plotMeshFast(EE); else
-m.plotElements(EE); end
-
-% Post polot adjustments
-axis off
-% m.Pplot.axP.LineWidth = 0.0001;
-% set(get(m.fig.Children.Children,'children'), 'edgecolor', [0 0 0])
-
-% Rotation and view -- if needed
-% rotate(m.fig.Children.Children,[1 0 0],90,mean(xyz.Lim,2));
-% rotate(m.Pplot.axP,[1 0 0],90,mean(xyz.Lim,2))
-% view(157,-66)
-% camproj('orthographic');
-% camproj('perspective');
-% set(gca, 'CameraPosition', [0,0,0])
-% set(gca, 'CameraTarget', [0,0,1])
-% set(gca, 'CameraUpVector', [0,1,1])
-
-fileNames{S.i} = 'S_TransverseWave';
-if saveON
-    fileNames{S.i} = func2str(S.Uxyz);
-    fileNames{S.i} = [fileNames{S.i},'_C_',num2str(cMapInd)];
-    savefig(m.fig,fullfile(saveOutputDir,fileNames{S.i}));
-end
+visualizationSeqence(m , S)
 
 %% Convert Fig to EPS
-clc;close all;
-% Convert FIG to: PNG, EPS, PDF
-convertFig2Eps(saveOutputDir,'png','expand','expGraph','eval: ax=fig.Children;  objOutH=ax; ResolutionDPI=450;');
-convertFig2Eps(saveOutputDir,'eps','expand','expGraph','eval: ax=fig.Children;  objOutH=ax; ResolutionDPI=450;');
-convertFig2Eps(saveOutputDir,'','expand','expGraph','eval: ax=fig.Children;  objOutH=ax; ResolutionDPI=450; outputExt=''.pdf'';');
-close all; 
-
-% end
+if saveON
+    clc;close all;
+    % Convert FIG to: PNG, EPS, PDF
+    convertFig2Eps(saveOutputDir,'png','expand','expGraph','eval: ax=fig.Children;  objOutH=ax; ResolutionDPI=450;');
+    convertFig2Eps(saveOutputDir,'eps','expand','expGraph','eval: ax=fig.Children;  objOutH=ax; ResolutionDPI=450;');
+    convertFig2Eps(saveOutputDir,'','expand','expGraph','eval: ax=fig.Children;  objOutH=ax; ResolutionDPI=450; outputExt=''.pdf'';');
+    close all; 
+end
 
 %% Sub functions 
+function visualizationSeqence(m , S)
+    global cMapInd saveON saveOutputDir
+
+    % Mesh properties
+    % m.Pplot.axisEqual = true;
+    % m.Pplot.View = 3;
+    m.cube.colourF = [204 204 0]/255;
+    m.cube.colourE = 70/100*[1 1 1];%[140 140 0]/255;
+    m.cube.colourE = [100 100 100]/255;
+    m.cube.faceAlpha = 100/100;
+
+    % Plot Mesh
+    m.plotMeshFast(m.translate(m.elements,[0 0 0]*m.Pplot.scaleFactor));
+
+    % Get elements set "EE" which is the set we will manipulate
+    % This is actually the mesh as an element set
+    EE = m.elements;
+    EE = m.transformElements(EE,@(E) E.updateColourPropertiesFrom(m.cube));
+    R0 = m.getMatrix(EE,'nodesR'); % Get initial state
+    EE0 = m.copyElements();
+    
+    % Transformation: Translate the mesh
+    % EE = m.translate(EE,[0 0 0]*m.Pplot.scaleFactor);
+    
+    % Transformation: Deformation or displacement
+    switch (1)
+        case 1% Deformation plotting        
+            EE = m.transformNodesR(EE,@(R) S.Uxyz(R,S));
+        case 2% Translation plotting
+            EE = m.transformElements(EE,@(E) displaceCenter_Uxyz(E,S));
+    end
+    % Get matrix state post process
+    R  = m.getMatrix(EE,'nodesR');
+    
+    % Calculate the colour gradients    
+    distM = max(sqrt(sum((R - R0).^2,2)));
+    EE = m.transformElements(EE,@(E) colourGrade(E,(EE0),distM,cMapInd));%struct2table
+        
+    % Ploting element by element or all using the matrix. 
+    % The difference is that the fast method doesn't allow for custom colour
+    % grading while the slow method being element by element allows for percise
+    % coloring
+    if cMapInd<0; m.plotMeshFast(EE); else
+    m.plotElements(EE); end
+    
+    % Post polot adjustments
+    axis off;
+    % m.Pplot.axP.LineWidth = 0.0001;
+    % set(get(m.fig.Children.Children,'children'), 'edgecolor', [0 0 0])
+    
+    % Rotation and view -- if needed
+    % rotate(m.fig.Children.Children,[1 0 0],90,mean(xyz.Lim,2));
+    % rotate(m.Pplot.axP,[1 0 0],90,mean(xyz.Lim,2))
+    % view(157,-66)
+    % camproj('orthographic');
+    % camproj('perspective');
+    % set(gca, 'CameraPosition', [0,0,0])
+    % set(gca, 'CameraTarget', [0,0,1])
+    % set(gca, 'CameraUpVector', [0,1,1])
+    
+    if saveON
+        S.fileName = func2str(S.Uxyz);
+        S.fileName = [S.fileName,'_C_',num2str(cMapInd)];
+        savefig(m.fig,fullfile(saveOutputDir,S.fileName));
+    end
+    disp("Done!")
+    m.exportToFile(saveOutputDir+"/"+S.fileName,"STL")
+    m.exportToFile(saveOutputDir+"/"+S.fileName,"OBJ")
+
+end
+
 function E = displaceCenter_Uxyz(E,S)
     rc = E.center;
     T = S.Uxyz(rc,S)-rc;
@@ -416,13 +283,9 @@ function E = colourGrade(E,Es_original,distM,cmapInd)
     else
         E.colourF = [238, 104, 104]/255*p + [204 204 0]/255*(1-p);
     end
-%     E.FaceAlpha=1;
-end
-
-% Get the colours from the cube and pass it to the element
-function E = colourUpdate(E,cube)
-% function E = colourUpdate(E,cube)
-    E.colourF = cube.colourF;
-    E.colourE = cube.colourE;
-    E.FaceAlpha = cube.FaceAlpha;
+    E.faceAlpha=p;
+    E.edgeAlpha=p;
+    E.colourE = "none"; %(1- E.colourF) *(1-E.faceAlpha); 
+%     E.nodesR = gpuArray(E.nodesR);
+%     E.FaceConnectNodes = gpuArray(E.FaceConnectNodes);
 end
