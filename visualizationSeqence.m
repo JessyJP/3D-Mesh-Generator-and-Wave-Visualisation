@@ -1,6 +1,6 @@
 %% Sub functions 
 function visualizationSeqence(m , S)
-    global cMapInd saveON saveOutputDir
+    global cMapInd saveON saveOutputDir exportCAD
 
     % Mesh properties
     % m.Pplot.axisEqual = true;
@@ -64,9 +64,12 @@ function visualizationSeqence(m , S)
         S.fileName = [S.fileName,'_C_',num2str(cMapInd)];
         savefig(m.fig,fullfile(saveOutputDir,S.fileName));
     end
+
+    if exportCAD
+        m.exportToFile(saveOutputDir+"/"+S.fileName,"STL")
+        m.exportToFile(saveOutputDir+"/"+S.fileName,"OBJ")
+    end
     disp("Done!")
-    m.exportToFile(saveOutputDir+"/"+S.fileName,"STL")
-    m.exportToFile(saveOutputDir+"/"+S.fileName,"OBJ")
 
 end
 

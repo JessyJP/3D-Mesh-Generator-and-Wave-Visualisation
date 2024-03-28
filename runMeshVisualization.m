@@ -13,9 +13,10 @@ addpath("./converFig2EPS_PNG_PDF_submodule")
 addpath("./Displacement&Deformation_Functions");
 
 % Properties
-global cMapInd saveON saveOutputDir
+global cMapInd saveON saveOutputDir exportCAD
 cMapInd = 11;% Colourmap index. Check the subfunction "colourGrade" at the end of the file
 saveON = false;% Control flag
+exportCAD = false;
 saveOutputDir='./Fig-EPS-PNG-output';% The output directory
 
 % Initialize the mesh generator
