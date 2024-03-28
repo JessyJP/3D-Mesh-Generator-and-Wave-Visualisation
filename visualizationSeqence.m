@@ -11,7 +11,7 @@ function visualizationSeqence(m , S)
     m.cube.faceAlpha = 100/100;
 
     % Plot Mesh
-    m.plotMeshFast(m.translate(m.elements,[0 0 0]*m.Pplot.scaleFactor));
+%     m.plotMeshFast(m.translate(m.elements,[0 0 0]*m.Pplot.scaleFactor));
 
     % Get elements set "EE" which is the set we will manipulate
     % This is actually the mesh as an element set
