@@ -2,3 +2,4 @@ Test.m
 \.venv
 *.pyc
 __pycache__
+*.mp4
