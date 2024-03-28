@@ -248,7 +248,7 @@ classdef MeshGenerator < handle
                         end
                     end                    
                 end
-                printProgressBar(i,N_elements,"barLength",20)
+                printProgressBar(i,N_elements,"barLength",20);
             end
             drawnow;
         end
