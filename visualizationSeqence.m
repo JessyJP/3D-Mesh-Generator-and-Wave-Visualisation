@@ -44,21 +44,25 @@ function visualizationSeqence(m , S)
     if cMapInd<0; m.plotMeshFast(EE); else
     m.plotElements(EE); end
     
-    % Post polot adjustments
+    %% Post polot adjustments
     axis off;
-    % m.Pplot.axP.LineWidth = 0.0001;
-    % set(get(m.fig.Children.Children,'children'), 'edgecolor', [0 0 0])
+    % Set line properties -- if needed
+%     m.Pplot.axP.LineWidth = 0.0001;
+%     set(m.fig.Children.Children, 'edgecolor', [1 1 1])
     
     % Rotation and view -- if needed
-    % rotate(m.fig.Children.Children,[1 0 0],90,mean(xyz.Lim,2));
-    % rotate(m.Pplot.axP,[1 0 0],90,mean(xyz.Lim,2))
-    % view(157,-66)
-    % camproj('orthographic');
-    % camproj('perspective');
-    % set(gca, 'CameraPosition', [0,0,0])
-    % set(gca, 'CameraTarget', [0,0,1])
-    % set(gca, 'CameraUpVector', [0,1,1])
+%     rotate(m.fig.Children.Children,[1 0 0],90,mean(m.xyz.Lim,2));
+%     rotate(m.Pplot.axP,[1 0 0],90,mean(m.xyz.Lim,2))
+
+    % Set view and cammera potision -- if needed
+%     view(157,-66)
+%     camproj('orthographic');
+%     camproj('perspective');
+%     set(gca, 'CameraPosition', [0,0,0])
+%     set(gca, 'CameraTarget', [0,0,1])
+%     set(gca, 'CameraUpVector', [0,1,1])
     
+    %% Exporting
     if saveON
         S.fileName = func2str(S.Uxyz);
         S.fileName = [S.fileName,'_C_',num2str(cMapInd)];
